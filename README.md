@@ -1,12 +1,12 @@
 # Sirchmunk 文件与图片检索：使用说明
 
-本文件夹用于交付 Python 包。安装 wheel 后，调用者传入自己的文件、问题、模型和缓存目录，即可获得文字回答及相关图片的缓存路径。无需网页，也无需本项目的源码、测试文档或 `.env`。
+本文件夹用于交付 Python 包。安装 wheel 后，调用者传入自己的一个或多个文件、问题、模型和缓存目录，即可获得文字回答及相关图片的缓存路径。无需网页，也无需本项目的源码、测试文档或 `.env`。
 
 ## 文件清单
 
 | 文件 | 用途 |
 | --- | --- |
-| `sirchmunk-0.2.1+images.1-py3-none-any.whl` | 可安装的 Sirchmunk 包，包含文件与图片检索接口 |
+| `sirchmunk-0.2.1+images.2-py3-none-any.whl` | 可安装的 Sirchmunk 包，包含单文件和多文件图片检索接口 |
 | `example_usage.py` | 单次检索示例；修改文件和模型参数后可直接运行 |
 | `LICENSE` | Sirchmunk 上游许可证 |
 | `SHA256SUMS.txt` | 交付文件的 SHA-256 校验值 |
@@ -16,14 +16,14 @@
 在本文件夹打开终端，并确保 `python` 指向准备使用的 Python 3.10+ 环境：
 
 ```powershell
-python -m pip install "./sirchmunk-0.2.1+images.1-py3-none-any.whl[images]"
+python -m pip install "./sirchmunk-0.2.1+images.2-py3-none-any.whl[images]"
 sirchmunk-files doctor
 ```
 
-如果已装过**同版本号**的旧 wheel，用新文件覆盖安装，然后重启 Python 程序：
+从旧版升级时安装新 wheel，然后重启 Python 程序：
 
 ```powershell
-python -m pip install --force-reinstall --no-deps "./sirchmunk-0.2.1+images.1-py3-none-any.whl"
+python -m pip install --upgrade "./sirchmunk-0.2.1+images.2-py3-none-any.whl[images]"
 ```
 
 安装依赖需要访问 Python 包索引或已配置的软件源。`sirchmunk-files doctor` 可检查 `rg`、`rga` 等检索工具是否可用。
@@ -60,6 +60,32 @@ asyncio.run(main())
 
 如果视觉模型与文本模型不同，另传 `vision_base_url`、`vision_model` 和 `vision_api_key`。纯文本文件不会调用视觉模型。每次调用 `search_file()` 会打开和关闭客户端，重复提交相同文件仍可使用磁盘缓存；同一文件连续提问推荐复用一个客户端。
 
+## 一次检索多个文件
+
+将文件路径列表交给 `search_files()`，返回一个合并回答和多个文件中的相关图片：
+
+```python
+import asyncio
+from sirchmunk import search_files
+
+result = asyncio.run(search_files(
+    ["操作说明.docx", "补充说明.pdf"],
+    "两份文档中如何创建用户并分配权限？",
+    base_url="http://your-model-server/v1",
+    model="your-vision-capable-model",
+    api_key="your-api-key",
+    data_dir="./sirchmunk_data",
+    image_cache_dir="./sirchmunk_data/images",
+    search_mode="FAST",
+    verify_images=False,
+))
+print(result.answer)
+for image in result.images:
+    print(image.reference_id, image.source.file_name, image.path)
+```
+
+已提交过的文件可用 `FileSearch.search_many(source_ids, query)` 重复检索。原单文件接口 `search_file()`、`FileSearch.search()` 继续可用。多文件中每张图用 `reference_id`（例如 `src_xxx:img_0001`）唯一标识；`image_limit=None` 对整次查询不设图片返回上限。
+
 ## 直接运行示例
 
 打开 `example_usage.py`，修改文件路径和模型参数，然后执行：
@@ -73,7 +99,7 @@ python example_usage.py
 ## 缓存和返回结果
 
 - `result.answer` 是文字回答，`result.images` 是相关图片列表；没有匹配图片时为空列表。
-- `image.image_id` 与缓存文件名对应，例如 `img_0003` 对应 `img_0003.png` 或 `.jpg`。`image.path` 是运行机器上的绝对路径。
+- `image.image_id` 与缓存文件名对应，例如 `img_0003` 对应 `img_0003.png` 或 `.jpg`。`image.reference_id` 是跨文件唯一标识；`image.path` 是运行机器上的绝对路径。
 - 图片保存在 `image_cache_dir/<source_id>/`。不同文件即使都含有 `img_0001`，也会位于各自的目录。同名但内容不同的文件会生成新的 `source_id`，不会混图。
 - `data_dir/catalog.sqlite` 记录文件、图片和识别缓存。相同内容、文件名及识别配置再次提交时可复用处理结果；更换文件内容后需重新提交。
 - `image_limit=None` 表示不设图片返回数量上限；`verify_images=False` 跳过查询时的视觉复核，首次导入含图文件仍需生成图片描述。
@@ -88,4 +114,4 @@ python example_usage.py
 sirchmunk-files serve --host 127.0.0.1 --port 8585 --service-token "your-service-token" --data-dir "./sirchmunk_data" --image-cache-dir "./sirchmunk_data/images" --search-mode FAST
 ```
 
-HTTP 请求需带 `Authorization: Bearer <service-token>`。上传文件用 `POST /v1/files`，等待 `GET /v1/jobs/{job_id}` 返回 `completed` 后，用 `POST /v1/search` 检索。跨机器读取图片时使用返回的 `images[].url` 请求图片内容；`images[].path` 是服务端本地路径。完整接口契约可在认证后访问 `/openapi.json`。
+HTTP 请求需带 `Authorization: Bearer <service-token>`。上传文件用 `POST /v1/files`，等待 `GET /v1/jobs/{job_id}` 返回 `completed` 后，用 `POST /v1/search` 检索。请求体传单个 `source_id` 或多个 `source_ids`，两者只能选一个。跨机器读取图片时使用返回的 `images[].url` 请求图片内容；`images[].path` 是服务端本地路径。完整接口契约可在认证后访问 `/openapi.json`。
