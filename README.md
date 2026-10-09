@@ -6,7 +6,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `sirchmunk-0.2.1+images.2-py3-none-any.whl` | 可安装的 Sirchmunk 包，包含单文件和多文件图片检索接口 |
+| `sirchmunk-0.2.1+images.3-py3-none-any.whl` | 可安装的 Sirchmunk 包，一个接口检索单个或多个文件 |
 | `example_usage.py` | 单次检索示例；修改文件和模型参数后可直接运行 |
 | `LICENSE` | Sirchmunk 上游许可证 |
 | `SHA256SUMS.txt` | 交付文件的 SHA-256 校验值 |
@@ -16,14 +16,14 @@
 在本文件夹打开终端，并确保 `python` 指向准备使用的 Python 3.10+ 环境：
 
 ```powershell
-python -m pip install "./sirchmunk-0.2.1+images.2-py3-none-any.whl[images]"
+python -m pip install "./sirchmunk-0.2.1+images.3-py3-none-any.whl[images]"
 sirchmunk-files doctor
 ```
 
 从旧版升级时安装新 wheel，然后重启 Python 程序：
 
 ```powershell
-python -m pip install --upgrade "./sirchmunk-0.2.1+images.2-py3-none-any.whl[images]"
+python -m pip install --upgrade "./sirchmunk-0.2.1+images.3-py3-none-any.whl[images]"
 ```
 
 安装依赖需要访问 Python 包索引或已配置的软件源。`sirchmunk-files doctor` 可检查 `rg`、`rga` 等检索工具是否可用。
@@ -58,19 +58,19 @@ async def main():
 asyncio.run(main())
 ```
 
-如果视觉模型与文本模型不同，另传 `vision_base_url`、`vision_model` 和 `vision_api_key`。纯文本文件不会调用视觉模型。每次调用 `search_file()` 会打开和关闭客户端，重复提交相同文件仍可使用磁盘缓存；同一文件连续提问推荐复用一个客户端。
+如果视觉模型与文本模型不同，另传 `vision_base_url`、`vision_model` 和 `vision_api_key`。纯文本文件不会调用视觉模型。`file_path` 传一个路径检索单文件，传路径列表检索多个文件；每次调用 `search_file()` 会打开和关闭客户端，重复提交相同文件仍可使用磁盘缓存。
 
 ## 一次检索多个文件
 
-将文件路径列表交给 `search_files()`，返回一个合并回答和多个文件中的相关图片：
+使用同一个 `search_file()`，把 `file_path` 设为路径列表即可：
 
 ```python
 import asyncio
-from sirchmunk import search_files
+from sirchmunk import search_file
 
-result = asyncio.run(search_files(
-    ["操作说明.docx", "补充说明.pdf"],
-    "两份文档中如何创建用户并分配权限？",
+result = asyncio.run(search_file(
+    file_path=["操作说明.docx", "补充说明.pdf"],
+    query="两份文档中如何创建用户并分配权限？",
     base_url="http://your-model-server/v1",
     model="your-vision-capable-model",
     api_key="your-api-key",
@@ -84,7 +84,7 @@ for image in result.images:
     print(image.reference_id, image.source.file_name, image.path)
 ```
 
-已提交过的文件可用 `FileSearch.search_many(source_ids, query)` 重复检索。原单文件接口 `search_file()`、`FileSearch.search()` 继续可用。多文件中每张图用 `reference_id`（例如 `src_xxx:img_0001`）唯一标识；`image_limit=None` 对整次查询不设图片返回上限。
+已提交过的文件可用 `FileSearch.search(source_id_or_ids, query)` 重复检索，参数同样支持单个 ID 或 ID 列表。多文件中每张图用 `reference_id`（例如 `src_xxx:img_0001`）唯一标识；`image_limit=None` 对整次查询不设图片返回上限。旧的 `search_files()` 和 `FileSearch.search_many()` 继续可用，以兼容已有代码。
 
 ## 直接运行示例
 
