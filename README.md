@@ -36,7 +36,7 @@ sirchmunk-files doctor
 从旧版升级时安装新 wheel，然后重启 Python 程序：
 
 ```powershell
-python -m pip install --upgrade "./sirchmunk-0.2.1+images.4-py3-none-any.whl[images]"
+python -m pip install --upgrade "./sirchmunk-0.2.1+images.4-py3-none-any.whl"
 ```
 
 安装依赖需要访问 Python 包索引或已配置的软件源。`sirchmunk-files doctor` 可检查 `rg`、`rga` 等检索工具是否可用。
