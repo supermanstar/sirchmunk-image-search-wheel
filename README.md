@@ -1,6 +1,19 @@
-# Sirchmunk 文件与图片检索：使用说明
+# Sirchmunk 图片检索扩展版
 
-本文件夹用于交付 Python 包。安装 wheel 后，调用者传入自己的一个或多个文件、问题、模型和缓存目录，即可获得文字回答及相关图片的缓存路径。无需网页，也无需本项目的源码、测试文档或 `.env`。
+这是基于 [Sirchmunk 原项目](https://github.com/modelscope/sirchmunk) 修改并打包的 Python wheel。原版已支持对多个文件进行文本检索；本扩展重点补上**文档图片识别、图片检索和图片结果返回**。调用者传入一个或多个文件及问题，得到文字回答和相关图片的缓存路径。仓库只提供交付文件，不包含业务文档或网页。
+
+## 相比原版新增了什么
+
+| 功能 | 本扩展的行为 |
+| --- | --- |
+| 自动判断文件是否含图 | 纯文本文件只走文本处理；有图片时才提取图片并调用视觉模型。 |
+| 文档图片识别 | 提取 DOCX、PPTX、PDF 中可识别的位图，处理扫描 PDF 页面及 PNG/JPEG；为图片生成描述和 OCR 文本，供检索使用。 |
+| 图文联合返回 | 检索时结合正文、图片描述及附近章节信息，返回文字回答和匹配的图片；可按需开启查询时的视觉复核。 |
+| 单文件与多文件使用同一接口 | `search_file(file_path=...)` 接受一个路径或路径列表；已提交文件的 `FileSearch.search()` 接受一个 ID 或 ID 列表。图片按所属文件隔离。 |
+| 原图缓存与准确定位 | 每张结果包含 `reference_id`、所属文件、原图缓存路径和 HTTP 图片地址。不同文件即使都有 `img_0001`，也不会混淆或按查询重复复制图片。 |
+| 可选 HTTP API | 除 Python 函数外，还可启动带令牌的接口服务；无需部署网页。 |
+
+处理流程：**接收文件 → 检测纯文本或含图 → 必要时提取并描述图片 → 检索正文与图片信息 → 返回回答和相关图片路径**。首次处理含图文件可能较慢；相同文件再次提交或重复提问可复用缓存。返回的是与问题匹配的图片，不保证把文档里的每张图都返回。
 
 ## 文件清单
 
@@ -52,7 +65,7 @@ async def main():
     )
     print(result.answer)
     for image in result.images:
-        print(image.image_id, image.path)
+        print(image.reference_id, image.source.file_name, image.path)
 
 
 asyncio.run(main())
@@ -104,7 +117,7 @@ python example_usage.py
 - `data_dir/catalog.sqlite` 记录文件、图片和识别缓存。相同内容、文件名及识别配置再次提交时可复用处理结果；更换文件内容后需重新提交。
 - `image_limit=None` 表示不设图片返回数量上限；`verify_images=False` 跳过查询时的视觉复核，首次导入含图文件仍需生成图片描述。
 
-支持 TXT、MD、PDF、DOCX、PPTX、PNG 和 JPEG。复杂 Office 绘图、SmartArt、PDF 矢量内容及外链图片可能无法完整提取；可查看 `result.warnings`。程序会把文档内容发送到调用者配置的模型服务。
+支持 TXT、MD、PDF、DOCX、PPTX、PNG 和 JPEG。图片识别取决于调用者配置的视觉模型；复杂 Office 绘图、SmartArt、PDF 矢量内容及外链图片可能无法完整提取，可查看 `result.warnings`。文件内容与图片会发送到调用者配置的模型服务。
 
 ## 可选 HTTP 接口
 
