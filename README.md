@@ -6,7 +6,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `sirchmunk-0.2.1+images.3-py3-none-any.whl` | 可安装的 Sirchmunk 包，一个接口检索单个或多个文件 |
+| `sirchmunk-0.2.1+images.4-py3-none-any.whl` | 可安装的 Sirchmunk 包，一个接口检索单个或多个文件 |
 | `example_usage.py` | 单次检索示例；修改文件和模型参数后可直接运行 |
 | `LICENSE` | Sirchmunk 上游许可证 |
 | `SHA256SUMS.txt` | 交付文件的 SHA-256 校验值 |
@@ -16,14 +16,14 @@
 在本文件夹打开终端，并确保 `python` 指向准备使用的 Python 3.10+ 环境：
 
 ```powershell
-python -m pip install "./sirchmunk-0.2.1+images.3-py3-none-any.whl[images]"
+python -m pip install "./sirchmunk-0.2.1+images.4-py3-none-any.whl[images]"
 sirchmunk-files doctor
 ```
 
 从旧版升级时安装新 wheel，然后重启 Python 程序：
 
 ```powershell
-python -m pip install --upgrade "./sirchmunk-0.2.1+images.3-py3-none-any.whl[images]"
+python -m pip install --upgrade "./sirchmunk-0.2.1+images.4-py3-none-any.whl[images]"
 ```
 
 安装依赖需要访问 Python 包索引或已配置的软件源。`sirchmunk-files doctor` 可检查 `rg`、`rga` 等检索工具是否可用。
@@ -84,7 +84,7 @@ for image in result.images:
     print(image.reference_id, image.source.file_name, image.path)
 ```
 
-已提交过的文件可用 `FileSearch.search(source_id_or_ids, query)` 重复检索，参数同样支持单个 ID 或 ID 列表。多文件中每张图用 `reference_id`（例如 `src_xxx:img_0001`）唯一标识；`image_limit=None` 对整次查询不设图片返回上限。旧的 `search_files()` 和 `FileSearch.search_many()` 继续可用，以兼容已有代码。
+已提交过的文件可用 `FileSearch.search(source_id_or_ids, query)` 重复检索，参数同样支持单个 ID 或 ID 列表。多文件中每张图用 `reference_id`（例如 `src_xxx:img_0001`）唯一标识；`image_limit=None` 对整次查询不设图片返回上限。
 
 ## 直接运行示例
 
@@ -114,4 +114,4 @@ python example_usage.py
 sirchmunk-files serve --host 127.0.0.1 --port 8585 --service-token "your-service-token" --data-dir "./sirchmunk_data" --image-cache-dir "./sirchmunk_data/images" --search-mode FAST
 ```
 
-HTTP 请求需带 `Authorization: Bearer <service-token>`。上传文件用 `POST /v1/files`，等待 `GET /v1/jobs/{job_id}` 返回 `completed` 后，用 `POST /v1/search` 检索。请求体传单个 `source_id` 或多个 `source_ids`，两者只能选一个。跨机器读取图片时使用返回的 `images[].url` 请求图片内容；`images[].path` 是服务端本地路径。完整接口契约可在认证后访问 `/openapi.json`。
+HTTP 请求需带 `Authorization: Bearer <service-token>`。上传文件用 `POST /v1/files`，等待 `GET /v1/jobs/{job_id}` 返回 `completed` 后，用 `POST /v1/search` 检索。请求体的 `source_id` 可以是单个 ID 或 ID 列表。跨机器读取图片时使用返回的 `images[].url` 请求图片内容；`images[].path` 是服务端本地路径。完整接口契约可在认证后访问 `/openapi.json`。
