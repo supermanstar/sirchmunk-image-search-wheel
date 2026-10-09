@@ -29,7 +29,7 @@
 在本文件夹打开终端，并确保 `python` 指向准备使用的 Python 3.10+ 环境：
 
 ```powershell
-python -m pip install "./sirchmunk-0.2.1+images.4-py3-none-any.whl[images]"
+python -m pip install "./sirchmunk-0.2.1+images.4-py3-none-any.whl"
 sirchmunk-files doctor
 ```
 
