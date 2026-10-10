@@ -11,6 +11,7 @@
 | 图文联合返回 | 检索时结合正文、图片描述及附近章节信息，返回文字回答和匹配的图片；可按需开启查询时的视觉复核。 |
 | 单文件与多文件使用同一接口 | `search_file(file_path=...)` 接受一个路径或路径列表；已提交文件的 `FileSearch.search()` 接受一个 ID 或 ID 列表。图片按所属文件隔离。 |
 | 原图缓存与准确定位 | 每张结果包含 `reference_id`、所属文件、原图缓存路径和 HTTP 图片地址。不同文件即使都有 `img_0001`，也不会混淆或按查询重复复制图片。 |
+| 缺失缓存自动恢复 | 已处理文件的图片或描述文件被删除后，如原文件仍在，下次调用自动重建；已有模型描述缓存会复用。无法恢复的旧记录不会阻塞其他文件。 |
 | 可选 HTTP API | 除 Python 函数外，还可启动带令牌的接口服务；无需部署网页。 |
 
 处理流程：**接收文件 → 检测纯文本或含图 → 必要时提取并描述图片 → 检索正文与图片信息 → 返回回答和相关图片路径**。首次处理含图文件可能较慢；相同文件再次提交或重复提问可复用缓存。返回的是与问题匹配的图片，不保证把文档里的每张图都返回。
@@ -19,7 +20,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `sirchmunk-0.2.1+images.4-py3-none-any.whl` | 可安装的 Sirchmunk 包，一个接口检索单个或多个文件 |
+| `sirchmunk-0.2.1+images.5-py3-none-any.whl` | 可安装的 Sirchmunk 包，一个接口检索单个或多个文件 |
 | `example_usage.py` | 单次检索示例；修改文件和模型参数后可直接运行 |
 | `LICENSE` | Sirchmunk 上游许可证 |
 | `SHA256SUMS.txt` | 交付文件的 SHA-256 校验值 |
@@ -29,14 +30,14 @@
 在本文件夹打开终端，并确保 `python` 指向准备使用的 Python 3.10+ 环境：
 
 ```powershell
-python -m pip install "./sirchmunk-0.2.1+images.4-py3-none-any.whl[images]"
+python -m pip install "./sirchmunk-0.2.1+images.5-py3-none-any.whl"
 sirchmunk-files doctor
 ```
 
 从旧版升级时安装新 wheel，然后重启 Python 程序：
 
 ```powershell
-python -m pip install --upgrade "./sirchmunk-0.2.1+images.4-py3-none-any.whl[images]"
+python -m pip install --upgrade "./sirchmunk-0.2.1+images.5-py3-none-any.whl"
 ```
 
 安装依赖需要访问 Python 包索引或已配置的软件源。`sirchmunk-files doctor` 可检查 `rg`、`rga` 等检索工具是否可用。
