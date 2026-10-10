@@ -12,6 +12,7 @@
 | 单文件与多文件使用同一接口 | `search_file(file_path=...)` 接受一个路径或路径列表；已提交文件的 `FileSearch.search()` 接受一个 ID 或 ID 列表。图片按所属文件隔离。 |
 | 原图缓存与准确定位 | 每张结果包含 `reference_id`、所属文件、原图缓存路径和 HTTP 图片地址。不同文件即使都有 `img_0001`，也不会混淆或按查询重复复制图片。 |
 | 缺失缓存自动恢复 | 已处理文件的图片或描述文件被删除后，如原文件仍在，下次调用自动重建；已有模型描述缓存会复用。无法恢复的旧记录不会阻塞其他文件。 |
+| 连续查询复用检索对象 | 同一个 `FileSearch` 客户端内只创建一次 `AgenticSearch`，直到客户端关闭；知识簇相似度复用仍关闭，新问题可能生成新簇。 |
 | 可选 HTTP API | 除 Python 函数外，还可启动带令牌的接口服务；无需部署网页。 |
 
 处理流程：**接收文件 → 检测纯文本或含图 → 必要时提取并描述图片 → 检索正文与图片信息 → 返回回答和相关图片路径**。首次处理含图文件可能较慢；相同文件再次提交或重复提问可复用缓存。返回的是与问题匹配的图片，不保证把文档里的每张图都返回。
@@ -20,7 +21,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `sirchmunk-0.2.1+images.5-py3-none-any.whl` | 可安装的 Sirchmunk 包，一个接口检索单个或多个文件 |
+| `sirchmunk-0.2.1+images.6-py3-none-any.whl` | 可安装的 Sirchmunk 包，一个接口检索单个或多个文件 |
 | `example_usage.py` | 单次检索示例；修改文件和模型参数后可直接运行 |
 | `LICENSE` | Sirchmunk 上游许可证 |
 | `SHA256SUMS.txt` | 交付文件的 SHA-256 校验值 |
@@ -30,14 +31,14 @@
 在本文件夹打开终端，并确保 `python` 指向准备使用的 Python 3.10+ 环境：
 
 ```powershell
-python -m pip install "./sirchmunk-0.2.1+images.5-py3-none-any.whl"
+python -m pip install "./sirchmunk-0.2.1+images.6-py3-none-any.whl"
 sirchmunk-files doctor
 ```
 
 从旧版升级时安装新 wheel，然后重启 Python 程序：
 
 ```powershell
-python -m pip install --upgrade "./sirchmunk-0.2.1+images.5-py3-none-any.whl"
+python -m pip install --upgrade "./sirchmunk-0.2.1+images.6-py3-none-any.whl"
 ```
 
 安装依赖需要访问 Python 包索引或已配置的软件源。`sirchmunk-files doctor` 可检查 `rg`、`rga` 等检索工具是否可用。
@@ -73,6 +74,39 @@ asyncio.run(main())
 ```
 
 如果视觉模型与文本模型不同，另传 `vision_base_url`、`vision_model` 和 `vision_api_key`。纯文本文件不会调用视觉模型。`file_path` 传一个路径检索单文件，传路径列表检索多个文件；每次调用 `search_file()` 会打开和关闭客户端，重复提交相同文件仍可使用磁盘缓存。
+
+## 连续提问时保持检索对象
+
+在同一个进程中循环提问，先提交文件一次，再复用 `FileSearch` 客户端。首次查询创建 `AgenticSearch`；退出 `async with` 时才关闭它。此模式不启用相似知识簇复用，新问题仍可能生成知识簇。
+
+```python
+import asyncio
+from sirchmunk import FileSearch
+
+
+async def main():
+    async with FileSearch(
+        text_base_url="http://your-model-server/v1",
+        text_model="your-model-name",
+        text_api_key="your-api-key",
+        vision_base_url="http://your-model-server/v1",
+        vision_model="your-model-name",
+        vision_api_key="your-api-key",
+        data_dir="./sirchmunk_data",
+        image_cache_dir="./sirchmunk_data/images",
+        search_mode="FAST",
+    ) as client:
+        submitted = await client.submit_file("你的文档.docx")
+        await client.wait(submitted.job_id)
+        while query := input("问题（留空退出）：").strip():
+            result = await client.search(submitted.source_id, query, verify_images=False)
+            print(result.answer)
+            for image in result.images:
+                print(image.path)
+
+
+asyncio.run(main())
+```
 
 ## 一次检索多个文件
 
